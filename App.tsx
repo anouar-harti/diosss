@@ -40,7 +40,8 @@ import { JobData, AppStep, Coordinates, AppView, User as UserType, Task, UserRol
 import * as Storage from './services/storageService';
 
 // Base64 Logo (Snowflake/Gear icon for HVAC)
-const COMPANY_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEX///8DAwO/v7/8/PzMzMz39/fS0tLq6urFxcXLy8vj4+OdnZ2UlJT09PQHBwewsLDz8/OhoaGtra3d3d2JiYm5ubmSkpK+vr5ycnJEREQqKipQUFAjIyN8fHxgYGBZWVkwMDAZGRlKSko6Ojpk174rAAADcElEQVR4nO3d63KCMBCGYUdBBAUqeKHW///iFdoZ20kmh00S1vd9Mzs7DL+EJAQCAAAAAAAAAAAAAAAAwC+t15/L5X2x1G27Xz9/vtb+W612l1L706n09r/eY30uP94i/d1i68t4W+e6bZftqZzX6+k8bY/Lw3b71q71bZ2rT/W43D/O07Z+36638/l0PZ3qtn6t61x9u52O07a+X2/n0+W0P9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjep++v/w7/f0/s98v/70LAAAAAAAAAAAAAAAA+Bc/ym4jqq+jL8AAAAAASUVORK5CYII="; 
+const COMPANY_LOGO_URL = "/logo.png";
+const COMPANY_LOGO_BASE64 = "";
 
 // --- Extracted Component for Worker Tasks to respect React Hook Rules ---
 interface WorkerTasksProps {
@@ -421,7 +422,7 @@ const App: React.FC = () => {
     setIsEnhancing(false);
   };
 
-  const createPDFDocument = () => {
+  const createPDFDocument = async () => {
     const doc = new jsPDF();
     
     const colorPrimary = [37, 99, 235];    
@@ -433,12 +434,20 @@ const App: React.FC = () => {
     doc.rect(0, 0, 210, 45, 'F'); 
 
     let titleX = 15;
-    if (COMPANY_LOGO_BASE64) {
+    if (!logoError) {
         try {
-            doc.addImage(COMPANY_LOGO_BASE64, 'PNG', 15, 5, 30, 30);
+            const img = new Image();
+            img.src = COMPANY_LOGO_URL;
+            img.crossOrigin = "Anonymous";
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+            // Try adding the HTMLImageElement to PDF
+            doc.addImage(img, 'PNG', 15, 5, 30, 30);
             titleX = 55;
         } catch (e) {
-            console.error("Error adding logo to PDF:", e);
+            console.warn("Could not load logo for PDF. Skipping image.", e);
             titleX = 15;
         }
     }
@@ -719,13 +728,13 @@ const App: React.FC = () => {
     return doc;
   };
 
-  const generatePDF = () => {
-      const doc = createPDFDocument();
+  const generatePDF = async () => {
+      const doc = await createPDFDocument();
       doc.save(`Parte_Harti_${clientName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   const handleShareEmail = async () => {
-      const doc = createPDFDocument();
+      const doc = await createPDFDocument();
       const fileName = `Parte_Harti_${clientName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
       const pdfBlob = doc.output('blob');
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
@@ -759,8 +768,8 @@ const App: React.FC = () => {
       window.location.href = mailtoLink;
   };
 
-  const handlePreviewPDF = () => {
-      const doc = createPDFDocument();
+  const handlePreviewPDF = async () => {
+      const doc = await createPDFDocument();
       const blobUrl = doc.output('bloburl');
       setPreviewPdfUrl(blobUrl.toString());
   };
@@ -771,8 +780,13 @@ const App: React.FC = () => {
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
           <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
               <div className="flex flex-col items-center mb-6">
-                {COMPANY_LOGO_BASE64 ? (
-                    <img src={COMPANY_LOGO_BASE64} alt="Harti Electrocool Logo" className="w-20 h-20 object-contain mb-3 drop-shadow-md rounded-xl" />
+                {!logoError ? (
+                    <img 
+                        src={COMPANY_LOGO_URL} 
+                        onError={() => setLogoError(true)}
+                        alt="Harti Electrocool Logo" 
+                        className="w-20 h-20 object-contain mb-3 drop-shadow-md rounded-xl" 
+                    />
                 ) : (
                     <div className="bg-gradient-to-br from-blue-600 to-cyan-500 p-3 rounded-xl text-white shadow-lg shadow-blue-200 mb-3">
                         <ClipboardCheck size={32} />
@@ -1462,8 +1476,13 @@ const App: React.FC = () => {
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
           <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {COMPANY_LOGO_BASE64 ? (
-                  <img src={COMPANY_LOGO_BASE64} alt="Logo" className="w-8 h-8 object-contain rounded" />
+              {!logoError ? (
+                  <img 
+                    src={COMPANY_LOGO_URL} 
+                    onError={() => setLogoError(true)}
+                    alt="Logo" 
+                    className="w-8 h-8 object-contain rounded" 
+                  />
               ) : (
                   <div className="bg-gradient-to-br from-blue-600 to-cyan-500 p-2 rounded-lg text-white shadow-md shadow-blue-200">
                       <ClipboardCheck size={20} />
