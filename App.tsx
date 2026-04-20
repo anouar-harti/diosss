@@ -36,6 +36,7 @@ import jsPDF from 'jspdf';
 import Timer from './components/Timer';
 import MapLocator from './components/MapLocator';
 import SignaturePad from './components/SignaturePad';
+import ChecklistReport from './components/ChecklistReport';
 import { enhanceJobDescription } from './services/geminiService';
 import { JobData, AppStep, Coordinates, AppView, User as UserType, Task, UserRole } from './types';
 import * as Storage from './services/storageService';
@@ -899,6 +900,16 @@ const App: React.FC = () => {
                   <span className="font-bold text-lg">Nuevo Parte de Trabajo</span>
               </button>
 
+              <button 
+                onClick={() => setView(AppView.CHECKLIST_REPORT)}
+                className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-6 rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-xl transition-all active:scale-95 flex flex-col items-center justify-center gap-3"
+              >
+                  <div className="bg-white/20 p-3 rounded-full">
+                    <ClipboardCheck size={32} />
+                  </div>
+                  <span className="font-bold text-lg">Nuevo Check List</span>
+              </button>
+
               {/* Worker Option: View Assigned Tasks */}
               {currentUser?.role === 'WORKER' && (
                   <button 
@@ -1599,6 +1610,15 @@ const App: React.FC = () => {
                 {step === AppStep.SIGNATURE && renderSignature()}
                 {step === AppStep.REVIEW && renderReview()}
             </>
+        )}
+
+        {view === AppView.CHECKLIST_REPORT && (
+            <ChecklistReport 
+                currentUser={currentUser} 
+                onBack={() => setView(AppView.DASHBOARD)} 
+                companyLogoUrl={COMPANY_LOGO_URL}
+                logoError={logoError}
+            />
         )}
       </main>
 

@@ -28,6 +28,13 @@ export enum AppStep {
   REVIEW = 'REVIEW',
 }
 
+export enum ChecklistStep {
+  INSTALLER = 'INSTALLER',
+  FORM = 'FORM',
+  SIGNATURE = 'SIGNATURE',
+  REVIEW = 'REVIEW',
+}
+
 // New Types for Auth and Tasks
 export type UserRole = 'ADMIN' | 'WORKER';
 
@@ -53,6 +60,7 @@ export enum AppView {
   LOGIN = 'LOGIN',
   DASHBOARD = 'DASHBOARD',
   JOB_REPORT = 'JOB_REPORT', // The original app flow
+  CHECKLIST_REPORT = 'CHECKLIST_REPORT', // New checklist flow
   TASK_LIST = 'TASK_LIST',   // For workers to see tasks
   ADMIN_USERS = 'ADMIN_USERS', // For admin to create users
   ADMIN_TASKS = 'ADMIN_TASKS', // For admin to assign tasks
