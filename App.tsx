@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   ClipboardCheck, 
   MapPin, 
@@ -196,11 +197,22 @@ const App: React.FC = () => {
   const [pauseStartTime, setPauseStartTime] = useState<Date | null>(null);
   const [totalPausedMs, setTotalPausedMs] = useState(0);
 
+  // --- NEW: Splash State ---
+  const [showSplash, setShowSplash] = useState(true);
+
   // --- NEW: PWA Install State ---
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // --- Effects ---
-  
+
+  // Splash Screen Effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3200); // Wait 3.2s total (3s animation + 0.2s padding)
+    return () => clearTimeout(timer);
+  }, []);
+
   // PWA Install Prompt Listener
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -1477,9 +1489,42 @@ const App: React.FC = () => {
   const showHeader = view !== AppView.LOGIN;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      
-      {showHeader && (
+    <>
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            initial={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+            className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center pointer-events-none shadow-[-20px_0_40px_rgba(0,0,0,0.15)]"
+          >
+             <div className="flex flex-col items-center">
+                 {/* This will show your animation gif, falls back to static logo automatically */}
+                 {!logoError ? (
+                     <img 
+                        src="/animacion-harti.gif" 
+                        onError={(e) => {
+                             e.currentTarget.src = COMPANY_LOGO_URL;
+                             e.currentTarget.className = "w-32 h-32 object-contain mb-4 animate-bounce";
+                        }}
+                        alt="Harti Animation" 
+                        className="w-48 h-48 object-contain mb-4" 
+                     />
+                 ) : (
+                     <div className="bg-gradient-to-br from-blue-600 to-cyan-500 p-6 rounded-2xl text-white shadow-xl shadow-blue-200 mb-6 animate-pulse">
+                         <ClipboardCheck size={64} />
+                     </div>
+                 )}
+                 <h1 className="text-2xl font-bold text-slate-800 tracking-tight">HARTI</h1>
+                 <h1 className="text-xl font-bold text-orange-500 tracking-wide">ELECTROCOOL</h1>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        
+        {showHeader && (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
           <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1638,6 +1683,7 @@ const App: React.FC = () => {
           </div>
       )}
     </div>
+    </>
   );
 };
 
