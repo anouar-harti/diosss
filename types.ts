@@ -23,7 +23,6 @@ export enum AppStep {
   IDLE = 'IDLE',
   WORKING = 'WORKING',
   DETAILS = 'DETAILS',
-  PHOTOS = 'PHOTOS',
   SIGNATURE = 'SIGNATURE',
   REVIEW = 'REVIEW',
 }

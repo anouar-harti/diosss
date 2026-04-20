@@ -25,11 +25,7 @@ import {
   Briefcase,
   Trash2,
   Clock3,
-  Smartphone,
-  Camera,
-  Image as ImageIcon,
-  Eye,
-  X
+  Smartphone
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Timer from './components/Timer';
@@ -183,10 +179,7 @@ const App: React.FC = () => {
   const [location, setLocation] = useState<Coordinates | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
   const [workerSignature, setWorkerSignature] = useState<string | null>(null);
-  const [photoBefore, setPhotoBefore] = useState<string | null>(null);
-  const [photoAfter, setPhotoAfter] = useState<string | null>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
 
   // --- NEW: Pause State ---
   const [isPaused, setIsPaused] = useState(false);
@@ -283,9 +276,6 @@ const App: React.FC = () => {
     setLocation(null);
     setSignature(null);
     setWorkerSignature(null);
-    setPhotoBefore(null);
-    setPhotoAfter(null);
-    setPreviewPdfUrl(null);
     // Reset Pause State
     setIsPaused(false);
     setPauseStartTime(null);
@@ -398,17 +388,6 @@ const App: React.FC = () => {
       }
       setIsPaused(false);
       setPauseStartTime(null);
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string | null>>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-          setter(reader.result as string);
-      };
-      reader.readAsDataURL(file);
   };
 
   const handleEnhanceDescription = async () => {
@@ -664,56 +643,6 @@ const App: React.FC = () => {
     doc.text("HARTI ELECTROCOOL CLIMATIZACIÓN Y SERVICIOS TÉCNICOS", 105, pageHeight - 12, { align: "center" });
     doc.text("Documento generado digitalmente con ClimaTrack Pro", 105, pageHeight - 7, { align: "center" });
 
-    // PAGE 2: Photos (Visual Documentation)
-    if (photoBefore || photoAfter) {
-        doc.addPage();
-        
-        doc.setFillColor(colorPrimary[0], colorPrimary[1], colorPrimary[2]);
-        doc.rect(0, 0, 210, 20, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text("DOCUMENTACIÓN VISUAL", 105, 13, { align: "center" });
-
-        let py = 30;
-
-        if (photoBefore) {
-            doc.setTextColor(colorDark[0], colorDark[1], colorDark[2]);
-            doc.setFontSize(12);
-            doc.text("ANTERIOR A LA INTERVENCIÓN:", 15, py);
-            try {
-                // Determine rough aspect ratio (square for simplicity, 1:1 max 120x120 or scaled)
-                // Using 180x100 rectangle fit area is a good choice for standard horizontal photos.
-                doc.addImage(photoBefore, 'JPEG', 15, py + 5, 180, 100, undefined, 'FAST');
-                py += 115;
-            } catch (e) {
-                console.error("Error adding photoBefore to PDF:", e);
-                py += 10;
-            }
-        }
-
-        if (photoAfter) {
-            if (py > 150) { // If it would be tight, move to next page or just squeeze it.
-                // 180x100 is ok, will reach 145+100 = 245. (Page is 297 high)
-            }
-            doc.setTextColor(colorDark[0], colorDark[1], colorDark[2]);
-            doc.setFontSize(12);
-            doc.text("POSTERIOR A LA INTERVENCIÓN:", 15, py);
-            try {
-                doc.addImage(photoAfter, 'JPEG', 15, py + 5, 180, 100, undefined, 'FAST');
-            } catch (e) {
-                console.error("Error adding photoAfter to PDF:", e);
-            }
-        }
-
-        doc.setFillColor(colorLight[0], colorLight[1], colorLight[2]);
-        doc.rect(0, pageHeight - 20, 210, 20, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text("HARTI ELECTROCOOL CLIMATIZACIÓN Y SERVICIOS TÉCNICOS", 105, pageHeight - 12, { align: "center" });
-        doc.text("Documento generado digitalmente con ClimaTrack Pro", 105, pageHeight - 7, { align: "center" });
-    }
-
     return doc;
   };
 
@@ -755,12 +684,6 @@ const App: React.FC = () => {
       // Open Mail client (mailto link cannot attach files automatically for security reasons)
       const mailtoLink = `mailto:${emails}?cc=${cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text + "\n\n[NOTA: El PDF se acaba de descargar en su dispositivo. Por favor, adjúntelo a este correo manualmente para enviarlo al cliente]")}`;
       window.location.href = mailtoLink;
-  };
-
-  const handlePreviewPDF = () => {
-      const doc = createPDFDocument();
-      const blobUrl = doc.output('bloburl');
-      setPreviewPdfUrl(blobUrl.toString());
   };
 
   // --- Render Functions ---
@@ -1250,87 +1173,15 @@ const App: React.FC = () => {
         />
 
         <div className="flex justify-end pt-4">
-              <button 
-                onClick={() => setStep(AppStep.PHOTOS)}
+             <button 
+                onClick={() => setStep(AppStep.SIGNATURE)}
                 disabled={!clientName || !workerName}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200"
              >
-                Continuar a Fotos <ChevronRight size={20} />
+                Continuar a Firmas <ChevronRight size={20} />
              </button>
         </div>
     </div>
-  );
-
-  const renderPhotos = () => (
-      <div className="space-y-6 animate-fadeIn pb-20">
-          <h2 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-2 flex items-center gap-2">
-              <Camera size={24} className="text-blue-600" /> Documentación Visual
-          </h2>
-          <p className="text-sm text-slate-500">Tome fotos del antes y el después para adjuntarlas al parte de trabajo.</p>
-
-          <div className="space-y-4">
-              {/* Photo Before */}
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <h3 className="font-semibold text-slate-700 text-sm uppercase flex items-center gap-1">
-                      <ImageIcon size={16} /> Foto del ANTES
-                  </h3>
-                  {photoBefore ? (
-                      <div className="relative rounded-lg overflow-hidden border border-slate-200">
-                          <img src={photoBefore} alt="Antes" className="w-full h-auto max-h-64 object-contain bg-slate-100" />
-                          <button onClick={() => setPhotoBefore(null)} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md">
-                              <Trash2 size={16} />
-                          </button>
-                      </div>
-                  ) : (
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Camera className="w-8 h-8 text-slate-400 mb-2" />
-                              <p className="text-sm text-slate-500">Toque para tomar foto</p>
-                          </div>
-                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoBefore)} />
-                      </label>
-                  )}
-              </div>
-
-              {/* Photo After */}
-              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                  <h3 className="font-semibold text-slate-700 text-sm uppercase flex items-center gap-1">
-                      <ImageIcon size={16} /> Foto del DESPUÉS
-                  </h3>
-                  {photoAfter ? (
-                      <div className="relative rounded-lg overflow-hidden border border-slate-200">
-                          <img src={photoAfter} alt="Después" className="w-full h-auto max-h-64 object-contain bg-slate-100" />
-                          <button onClick={() => setPhotoAfter(null)} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-md">
-                              <Trash2 size={16} />
-                          </button>
-                      </div>
-                  ) : (
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                              <Camera className="w-8 h-8 text-slate-400 mb-2" />
-                              <p className="text-sm text-slate-500">Toque para tomar foto</p>
-                          </div>
-                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoAfter)} />
-                      </label>
-                  )}
-              </div>
-          </div>
-
-          <div className="flex justify-between pt-4">
-              <button 
-                  onClick={() => setStep(AppStep.DETAILS)}
-                  className="flex items-center gap-2 text-slate-600 px-4 py-3 font-medium hover:bg-slate-100 rounded-xl"
-              >
-                  <ChevronLeft size={20} /> Volver
-              </button>
-              <button 
-                  onClick={() => setStep(AppStep.SIGNATURE)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-              >
-                  Omitir / Siguiente <ChevronRight size={20} />
-              </button>
-          </div>
-      </div>
   );
 
   const renderSignature = () => (
@@ -1350,9 +1201,9 @@ const App: React.FC = () => {
             <SignaturePad onSave={setSignature} title="Firma del Cliente" />
         </div>
         
-         <div className="flex justify-between pt-4">
+        <div className="flex justify-between pt-4">
              <button 
-                onClick={() => setStep(AppStep.PHOTOS)}
+                onClick={() => setStep(AppStep.DETAILS)}
                 className="flex items-center gap-2 text-slate-600 px-4 py-3 font-medium hover:bg-slate-100 rounded-xl"
              >
                 <ChevronLeft size={20} /> Volver
@@ -1381,23 +1232,6 @@ const App: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={handlePreviewPDF}
-                    className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 p-4 rounded-xl font-bold hover:bg-slate-200 transition-all shadow-sm active:scale-95 border border-slate-200"
-                  >
-                      <Eye size={20} />
-                      <span className="text-sm md:text-base">Previsualizar</span>
-                  </button>
-                  <button 
-                    onClick={() => setStep(AppStep.DETAILS)}
-                    className="w-full flex items-center justify-center gap-2 bg-white text-orange-600 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all shadow-sm active:scale-95 border border-orange-200"
-                  >
-                      <PenTool size={20} />
-                      <span className="text-sm md:text-base">Editar Datos</span>
-                  </button>
-              </div>
-              
               <button 
                 onClick={generatePDF}
                 className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white p-4 rounded-xl font-bold hover:bg-black transition-all shadow-xl shadow-slate-200 active:scale-95"
@@ -1432,9 +1266,6 @@ const App: React.FC = () => {
                 setLocation(null);
                 setSignature(null);
                 setWorkerSignature(null);
-                setPhotoBefore(null);
-                setPhotoAfter(null);
-                setPreviewPdfUrl(null);
                 setTotalPausedMs(0);
                 setIsPaused(false);
                 setPauseStartTime(null);
@@ -1468,7 +1299,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4">
                  {view === AppView.JOB_REPORT && (
                     <div className="flex gap-1.5 mr-2">
-                        {[AppStep.IDLE, AppStep.WORKING, AppStep.DETAILS, AppStep.PHOTOS, AppStep.SIGNATURE, AppStep.REVIEW].map((s, i) => (
+                        {[AppStep.IDLE, AppStep.WORKING, AppStep.DETAILS, AppStep.SIGNATURE, AppStep.REVIEW].map((s, i) => (
                             <div 
                                 key={s} 
                                 className={`h-2 w-2 rounded-full transition-colors ${
@@ -1514,7 +1345,6 @@ const App: React.FC = () => {
                 {step === AppStep.IDLE && renderTimer()}
                 {step === AppStep.WORKING && renderTimer()}
                 {step === AppStep.DETAILS && renderDetails()}
-                {step === AppStep.PHOTOS && renderPhotos()}
                 {step === AppStep.SIGNATURE && renderSignature()}
                 {step === AppStep.REVIEW && renderReview()}
             </>
@@ -1524,47 +1354,6 @@ const App: React.FC = () => {
       <footer className="p-4 text-center text-slate-400 text-xs">
         <p>&copy; {new Date().getFullYear()} Harti Electrocool Climatización</p>
       </footer>
-
-      {previewPdfUrl && (
-          <div className="fixed inset-0 z-[100] bg-slate-900 bg-opacity-90 flex flex-col p-2 md:p-6 backdrop-blur-sm">
-              <div className="w-full max-w-5xl mx-auto h-full bg-white rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-                  <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200">
-                      <div className="flex items-center gap-4">
-                          <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                              <FileText className="text-blue-500" size={20} /> 
-                              Vista Previa del Parte
-                          </h3>
-                          <a 
-                            href={previewPdfUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hidden md:flex text-sm text-blue-600 hover:text-blue-800 font-medium underline"
-                          >
-                             Abrir en nueva pestaña
-                          </a>
-                      </div>
-                      <button 
-                        onClick={() => setPreviewPdfUrl(null)} 
-                        className="text-slate-500 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                      >
-                          <X size={24} />
-                      </button>
-                  </div>
-                  <div className="flex-1 w-full bg-slate-200 relative flex flex-col items-center justify-center p-4">
-                      {/* Note for sandboxed iframes (like AI Studio) or incompatible mobile browsers */}
-                      <div className="absolute inset-x-0 top-0 text-center p-4 bg-blue-50 text-blue-800 text-sm border-b border-blue-100 z-0">
-                         Si el PDF no carga o aparece bloqueado, <a href={previewPdfUrl} target="_blank" rel="noopener noreferrer" className="font-bold underline">Haz clic aquí para abrirlo</a>.
-                      </div>
-                      
-                      <iframe 
-                        src={previewPdfUrl} 
-                        className="w-full h-full absolute inset-0 border-0 z-10" 
-                        title="Previsualización PDF" 
-                      />
-                  </div>
-              </div>
-          </div>
-      )}
     </div>
   );
 };
