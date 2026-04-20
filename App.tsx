@@ -189,6 +189,7 @@ const App: React.FC = () => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   // --- NEW: Pause State ---
   const [isPaused, setIsPaused] = useState(false);
