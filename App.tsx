@@ -426,13 +426,17 @@ const App: React.FC = () => {
   const createPDFDocument = async () => {
     const doc = new jsPDF();
     
-    const colorPrimary = [37, 99, 235];    
-    const colorAccent = [249, 115, 22];    
-    const colorDark = [30, 41, 59];        
-    const colorLight = [241, 245, 249];    
+    // Brand Colors matched to logo
+    const colorPrimary = [0, 174, 239];    // Cyan from logo
+    const colorAccent = [249, 115, 22];    // Orange from logo
+    const colorDark = [30, 41, 59];        // Slate 800 - professional dark text
+    const colorLight = [241, 245, 249];    // Slate 100
 
-    doc.setFillColor(colorPrimary[0], colorPrimary[1], colorPrimary[2]);
-    doc.rect(0, 0, 210, 45, 'F'); 
+    // Replaced blue filled rectangle with an elegant white header
+    // Just an accent line at the bottom of the header area instead
+    doc.setDrawColor(226, 232, 240); // very light slate
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45); 
 
     let titleX = 15;
     if (!logoError) {
@@ -445,7 +449,7 @@ const App: React.FC = () => {
                 img.onerror = reject;
             });
             // Try adding the HTMLImageElement to PDF
-            doc.addImage(img, 'PNG', 15, 5, 30, 30);
+            doc.addImage(img, 'PNG', 15, 5, 35, 35); // slightly bigger to look nice
             titleX = 55;
         } catch (e) {
             console.warn("Could not load logo for PDF. Skipping image.", e);
@@ -453,21 +457,23 @@ const App: React.FC = () => {
         }
     }
 
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(colorDark[0], colorDark[1], colorDark[2]);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(26);
     doc.text("HARTI", titleX, 20);
-    doc.setTextColor(colorAccent[0], colorAccent[1], colorAccent[2]); 
+    doc.setTextColor(colorPrimary[0], colorPrimary[1], colorPrimary[2]); 
     doc.text("ELECTROCOOL", titleX, 30);
     
     doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(100, 116, 139); // Slate 500
     doc.setFont("helvetica", "normal");
     doc.text("CLIMATIZACIÓN Y SERVICIOS TÉCNICOS", titleX, 38);
 
     doc.setFontSize(18);
+    doc.setTextColor(colorDark[0], colorDark[1], colorDark[2]);
     doc.text("PARTE DE TRABAJO", 195, 20, { align: "right" });
     doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 195, 30, { align: "right" });
     doc.text(`Ref: ${Date.now().toString().slice(-6)}`, 195, 36, { align: "right" });
 
