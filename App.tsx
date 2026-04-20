@@ -24,7 +24,8 @@ import {
   Lock,
   Briefcase,
   Trash2,
-  Clock3
+  Clock3,
+  Smartphone
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Timer from './components/Timer';
@@ -35,7 +36,7 @@ import { JobData, AppStep, Coordinates, AppView, User as UserType, Task, UserRol
 import * as Storage from './services/storageService';
 
 // Base64 Logo (Snowflake/Gear icon for HVAC)
-const COMPANY_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEX///8DAwO/v7/8/PzMzMz39/fS0tLq6urFxcXLy8vj4+OdnZ2UlJT09PQHBwewsLDz8/OhoaGtra3d3d2JiYm5ubmSkpK+vr5ycnJEREQqKipQUFAjIyN8fHxgYGBZWVkwMDAZGRlKSko6Ojpk174rAAADcElEQVR4nO3d63KCMBCGYUdBBAUqeKHW///iFdoZ20kmh00S1vd9Mzs7DL+EJAQCAAAAAAAAAAAAAAAAwC+t15/L5X2x1G27Xz9/vtb+W612l1L706n09r/eY30uP94i/d1i68t4W+e6bZftqZzX6+k8bY/Lw3b71q71bZ2rT/W43D/O07Z+36638/l0PZ3qtn6t61x9u52O07a+X2/n0+W0P9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjep++v/w7/f0/s98v/70LAAAAAAAAAAAAAAAA+Bc/ym4jqq+jL8AAAAAASUVORK5CYII="; 
+const COMPANY_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEX///8DAwO/v7/8/PzMzMz39/fS0tLq6urFxcXLy8vj4+OdnZ2UlJT09PQHBwewsLDz8/OhoaGtra3d3d2JiYm5ubmSkpK+vr5ycnJEREQqKipQUFAjIyN8fHxgYGBZWVkwMDAZGRlKSko6Ojpk174rAAADcElEQVR4nO3d63KCMBCGYUdBBAUqeKHW///iFdoZ20kmh00S1vd9Mzs7DL+EJAQCAAAAAAAAAAAAAAAAwC+t15/L5X2x1G27Xz9/vtb+W612l1L706n09r/eY30uP94i/d1i68t4W+e6bZftqZzX6+k8bY/Lw3b71q71bZ2rT/W43D/O07Z+36638/l0PZ3qtn6t61x9u52O07a+X2/n0+W0P9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjet+u2/pynavP9bg8P87Ttn693s6ny/mwP9Xjep++v/w7/f0/s98v/70LAAAAAAAAAAAAAAAA+Bc/ym4jqq+jL8AAAAAASUVORK5CYII="; 
 
 // --- Extracted Component for Worker Tasks to respect React Hook Rules ---
 interface WorkerTasksProps {
@@ -172,6 +173,7 @@ const App: React.FC = () => {
   const [materials, setMaterials] = useState("");
   const [price, setPrice] = useState("");
   const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
   const [workerName, setWorkerName] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [location, setLocation] = useState<Coordinates | null>(null);
@@ -184,7 +186,26 @@ const App: React.FC = () => {
   const [pauseStartTime, setPauseStartTime] = useState<Date | null>(null);
   const [totalPausedMs, setTotalPausedMs] = useState(0);
 
+  // --- NEW: PWA Install State ---
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   // --- Effects ---
+  
+  // PWA Install Prompt Listener
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
   
   // Always subscribe to users to have them ready for login and admin views
   useEffect(() => {
@@ -249,6 +270,7 @@ const App: React.FC = () => {
     setMaterials("");
     setPrice("");
     setClientName("");
+    setClientEmail("");
     setWorkerName(""); 
     setManualAddress("");
     setLocation(null);
@@ -273,13 +295,13 @@ const App: React.FC = () => {
       });
 
       if (success) {
-          setUserMsg("Usuario creado en la nube.");
+          setUserMsg("Usuario creado correctamente.");
           setNewUserUser("");
           setNewUserPass("");
           setNewUserFullname("");
           setTimeout(() => setUserMsg(""), 3000);
       } else {
-          setUserMsg("Error al crear usuario.");
+          setUserMsg("El usuario ya existe.");
       }
   };
 
@@ -320,6 +342,14 @@ const App: React.FC = () => {
       if(window.confirm("¿Estás seguro de que quieres eliminar esta asignación?")) {
           await Storage.deleteTask(taskId);
       }
+  };
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    setDeferredPrompt(null);
   };
 
   // --- Job Report Handlers ---
@@ -368,7 +398,7 @@ const App: React.FC = () => {
     setIsEnhancing(false);
   };
 
-  const generatePDF = () => {
+  const createPDFDocument = () => {
     const doc = new jsPDF();
     
     const colorPrimary = [37, 99, 235];    
@@ -431,6 +461,13 @@ const App: React.FC = () => {
     doc.setTextColor(colorDark[0], colorDark[1], colorDark[2]);
     doc.setFont("helvetica", "bold");
     doc.text(clientName || "No especificado", 115, y + 18);
+    
+    if (clientEmail) {
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 100, 100);
+        doc.text(clientEmail, 115, y + 24);
+    }
 
     y += 45;
 
@@ -606,7 +643,47 @@ const App: React.FC = () => {
     doc.text("HARTI ELECTROCOOL CLIMATIZACIÓN Y SERVICIOS TÉCNICOS", 105, pageHeight - 12, { align: "center" });
     doc.text("Documento generado digitalmente con ClimaTrack Pro", 105, pageHeight - 7, { align: "center" });
 
-    doc.save(`Parte_Harti_${clientName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+    return doc;
+  };
+
+  const generatePDF = () => {
+      const doc = createPDFDocument();
+      doc.save(`Parte_Harti_${clientName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  };
+
+  const handleShareEmail = async () => {
+      const doc = createPDFDocument();
+      const fileName = `Parte_Harti_${clientName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+      const pdfBlob = doc.output('blob');
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      const subject = `Parte de Trabajo - ${clientName} - Harti Electrocool`;
+      const text = `Hola,\n\nAdjunto le envío el parte de trabajo del servicio realizado el ${new Date().toLocaleDateString()}.\n\nTécnico: ${workerName}\nTotal: ${price} €\n\nUn saludo,\nHarti Electrocool Climatización`;
+      const emails = clientEmail ? `${clientEmail}` : "";
+      const cc = "hartielectocool@gmail.com";
+
+      // Try native Web Share API first (best for mobile, attaches the file)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+              await navigator.share({
+                  files: [file],
+                  title: subject,
+                  text: text
+              });
+              return; // Success
+          } catch (error) {
+              console.log('Error sharing:', error);
+              // Fallback if sharing was cancelled or failed
+          }
+      } 
+      
+      // Fallback for desktops / unsupported browsers
+      // Download the PDF automatically
+      doc.save(fileName);
+
+      // Open Mail client (mailto link cannot attach files automatically for security reasons)
+      const mailtoLink = `mailto:${emails}?cc=${cc}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text + "\n\n[NOTA: El PDF se acaba de descargar en su dispositivo. Por favor, adjúntelo a este correo manualmente para enviarlo al cliente]")}`;
+      window.location.href = mailtoLink;
   };
 
   // --- Render Functions ---
@@ -669,6 +746,26 @@ const App: React.FC = () => {
 
   const renderDashboard = () => (
       <div className="space-y-6 animate-fadeIn">
+          {deferredPrompt && (
+              <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-2xl shadow-lg animate-pulse">
+                <button 
+                    onClick={handleInstallApp}
+                    className="w-full bg-white rounded-xl p-4 flex items-center justify-between group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="bg-indigo-100 p-2 rounded-full text-indigo-600">
+                            <Smartphone size={24} />
+                        </div>
+                        <div className="text-left">
+                            <p className="font-bold text-slate-800">Instalar Aplicación</p>
+                            <p className="text-xs text-slate-500">Añadir a la pantalla de inicio</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                </button>
+              </div>
+          )}
+
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h2 className="text-xl font-bold text-slate-800 mb-1">Hola, {currentUser?.fullName}</h2>
               <p className="text-slate-500 text-sm">¿Qué te gustaría hacer hoy?</p>
@@ -990,17 +1087,31 @@ const App: React.FC = () => {
         </div>
 
         {/* Client Info */}
-        <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
-                <User size={14} /> Nombre del Cliente
-            </label>
-            <input 
-                type="text" 
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Ej. Juan Pérez"
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                    <User size={14} /> Nombre del Cliente
+                </label>
+                <input 
+                    type="text" 
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Ej. Juan Pérez"
+                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                    <Mail size={14} /> Correo Electrónico (Opcional)
+                </label>
+                <input 
+                    type="email" 
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="Ej. cliente@email.com"
+                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+            </div>
         </div>
 
         {/* Materials */}
@@ -1129,13 +1240,13 @@ const App: React.FC = () => {
                   Descargar Parte (PDF)
               </button>
               
-              <a 
-                href={`mailto:?subject=Parte de Trabajo - ${clientName} - Harti Electrocool&body=Hola,%0D%0A%0D%0AAdjunto le envío el parte de trabajo del servicio realizado el ${new Date().toLocaleDateString()}.%0D%0A%0D%0ATécnico: ${workerName}%0D%0ATotal: ${price} €%0D%0A%0D%0AUn saludo,%0D%0AHarti Electrocool Climatización`}
+              <button 
+                onClick={handleShareEmail}
                 className="w-full flex items-center justify-center gap-3 bg-white text-blue-600 border-2 border-blue-100 p-4 rounded-xl font-bold hover:bg-blue-50 transition-all active:scale-95"
               >
                   <Mail size={20} />
                   Preparar Email
-              </a>
+              </button>
           </div>
 
           <button 
@@ -1149,6 +1260,7 @@ const App: React.FC = () => {
                 setMaterials("");
                 setPrice("");
                 setClientName("");
+                setClientEmail("");
                 setWorkerName(""); // Clear worker name
                 setManualAddress("");
                 setLocation(null);
