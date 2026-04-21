@@ -1421,10 +1421,12 @@ const App: React.FC = () => {
              </button>
              <button 
                 onClick={async () => {
-                    setStep(AppStep.REVIEW);
+                    setIsEnhancing(true); // Reusing this loading state, or could create `isSavingReport`
                     try {
                         const doc = await createPDFDocument();
                         const blob = doc.output('blob');
+                        
+                        // Save to history in background (Directo a la nube)
                         await Storage.saveReport({
                             type: 'JOB',
                             clientName: clientName || "Consumidor Final",
@@ -1433,14 +1435,24 @@ const App: React.FC = () => {
                             description: description.substring(0, 100),
                             refCode: "JOB-" + Date.now().toString().slice(-6)
                         }, blob);
+                        
+                        setStep(AppStep.REVIEW);
                     } catch (e) {
                         console.error("Error saving job report to history", e);
+                        // If it fails, still go to Review so they don't get stuck
+                        setStep(AppStep.REVIEW);
+                    } finally {
+                        setIsEnhancing(false);
                     }
                 }}
-                disabled={!signature || !workerSignature}
+                disabled={!signature || !workerSignature || isEnhancing}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200"
              >
-                Finalizar y Guardar <CheckCircle2 size={20} />
+                {isEnhancing ? (
+                    'Guardando...'
+                ) : (
+                    <>Finalizar y Guardar <CheckCircle2 size={20} /></>
+                )}
              </button>
         </div>
     </div>

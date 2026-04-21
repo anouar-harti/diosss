@@ -69,6 +69,7 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
     const [clientSignature, setClientSignature] = useState<string | null>(null);
     const [clientName, setClientName] = useState("");
     const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleNext = () => {
         if (step === ChecklistStep.INSTALLER) setStep(ChecklistStep.FORM);
@@ -511,10 +512,12 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                         {step === ChecklistStep.SIGNATURE ? (
                             <button 
                                 onClick={async () => {
-                                    setStep(ChecklistStep.REVIEW);
+                                    setIsSaving(true);
                                     try {
                                         const doc = await createPDFDocument();
                                         const blob = doc.output('blob');
+                                        
+                                        // Save to Firebase (Directo al Historial Completo)
                                         await Storage.saveReport({
                                             type: 'CHECKLIST',
                                             clientName: clientName || "Consumidor Final",
@@ -523,14 +526,19 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                                             description: `Checklist Técnico - ${clientName || 'General'}`,
                                             refCode: "CL-" + Date.now().toString().slice(-6)
                                         }, blob);
+                                        
+                                        setStep(ChecklistStep.REVIEW);
                                     } catch (e) {
                                         console.error("Error saving checklist report to history", e);
+                                        setStep(ChecklistStep.REVIEW); // Advance anyway on failure
+                                    } finally {
+                                        setIsSaving(false);
                                     }
                                 }}
-                                disabled={!workerSignature || !clientSignature}
+                                disabled={!workerSignature || !clientSignature || isSaving}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
                             >
-                                Finalizar y Guardar <CheckCircle2 size={20} />
+                                {isSaving ? 'Guardando...' : <>Finalizar y Guardar <CheckCircle2 size={20} /></>}
                             </button>
                         ) : (
                             <button 
