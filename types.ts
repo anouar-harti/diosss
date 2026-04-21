@@ -56,6 +56,19 @@ export interface Task {
   createdAt: number;
 }
 
+export type ReportType = 'JOB' | 'CHECKLIST';
+
+export interface Report {
+  id: string;
+  type: ReportType;
+  pdfUrl: string;
+  clientName: string;
+  workerName: string;
+  createdAt: number;
+  description?: string;
+  refCode?: string;
+}
+
 export enum AppView {
   LOGIN = 'LOGIN',
   DASHBOARD = 'DASHBOARD',
@@ -64,4 +77,5 @@ export enum AppView {
   TASK_LIST = 'TASK_LIST',   // For workers to see tasks
   ADMIN_USERS = 'ADMIN_USERS', // For admin to create users
   ADMIN_TASKS = 'ADMIN_TASKS', // For admin to assign tasks
+  ADMIN_HISTORY = 'ADMIN_HISTORY', // For admin to see history
 }

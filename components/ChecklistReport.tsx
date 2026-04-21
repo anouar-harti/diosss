@@ -14,6 +14,7 @@ import {
 import jsPDF from 'jspdf';
 import SignaturePad from './SignaturePad';
 import { User as UserType, ChecklistStep } from '../types';
+import * as Storage from '../services/storageService';
 
 interface ChecklistReportProps {
     currentUser: UserType | null;
@@ -507,12 +508,38 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                         >
                             Volver
                         </button>
-                        <button 
-                            onClick={handleNext}
-                            className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                        >
-                            Continuar <ChevronRight size={20} />
-                        </button>
+                        {step === ChecklistStep.SIGNATURE ? (
+                            <button 
+                                onClick={async () => {
+                                    setStep(ChecklistStep.REVIEW);
+                                    try {
+                                        const doc = await createPDFDocument();
+                                        const blob = doc.output('blob');
+                                        await Storage.saveReport({
+                                            type: 'CHECKLIST',
+                                            clientName: clientName || "Consumidor Final",
+                                            workerName: installerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
+                                            createdAt: Date.now(),
+                                            description: `Checklist Técnico - ${clientName || 'General'}`,
+                                            refCode: "CL-" + Date.now().toString().slice(-6)
+                                        }, blob);
+                                    } catch (e) {
+                                        console.error("Error saving checklist report to history", e);
+                                    }
+                                }}
+                                disabled={!workerSignature || !clientSignature}
+                                className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
+                            >
+                                Finalizar y Guardar <CheckCircle2 size={20} />
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={handleNext}
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 transition-colors"
+                            >
+                                Continuar <ChevronRight size={20} />
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

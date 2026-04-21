@@ -1,5 +1,5 @@
-import { User, Task } from '../types';
-import { db } from './firebase';
+import { User, Task, Report } from '../types';
+import { db, storage } from './firebase';
 import { 
   collection, 
   setDoc, 
@@ -8,12 +8,15 @@ import {
   onSnapshot, 
   query, 
   where,
-  updateDoc 
+  updateDoc,
+  orderBy
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // Nombres de las colecciones en la nube
 const USERS_COL = 'users';
 const TASKS_COL = 'tasks';
+const REPORTS_COL = 'reports';
 
 // --- FUNCIONES DE SUSCRIPCIÓN (TIEMPO REAL) ---
 
@@ -111,4 +114,43 @@ export const getUsersOnce = async (): Promise<User[]> => {
     // Por simplicidad en esta migración, devolveremos una promesa vacía ya que
     // App.tsx usará suscripciones.
     return []; 
+};
+
+// --- HISTORY & REPORTS ---
+
+export const saveReport = async (reportData: Omit<Report, 'id' | 'pdfUrl'>, pdfBlob: Blob): Promise<boolean> => {
+  try {
+    const reportId = `${reportData.type}_${Date.now()}`;
+    const fileRef = ref(storage, `reports/${reportId}.pdf`);
+    
+    // Upload PDF to Firebase Storage
+    await uploadBytes(fileRef, pdfBlob);
+    
+    // Get Download URL
+    const pdfUrl = await getDownloadURL(fileRef);
+    
+    // Save metadata to Firestore
+    const newReport: Report = {
+      ...reportData,
+      id: reportId,
+      pdfUrl,
+    };
+    
+    await setDoc(doc(db, REPORTS_COL, reportId), newReport);
+    return true;
+  } catch (error) {
+    console.error("Error saving report:", error);
+    return false;
+  }
+};
+
+export const subscribeToReports = (callback: (reports: Report[]) => void) => {
+  const q = query(collection(db, REPORTS_COL), orderBy('createdAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const reports: Report[] = [];
+    snapshot.forEach((doc) => {
+      reports.push(doc.data() as Report);
+    });
+    callback(reports);
+  });
 };

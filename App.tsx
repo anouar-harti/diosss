@@ -30,13 +30,15 @@ import {
   Camera,
   Image as ImageIcon,
   Eye,
-  X
+  X,
+  FolderClock
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import Timer from './components/Timer';
 import MapLocator from './components/MapLocator';
 import SignaturePad from './components/SignaturePad';
 import ChecklistReport from './components/ChecklistReport';
+import AdminHistory from './components/AdminHistory';
 import { enhanceJobDescription } from './services/geminiService';
 import { JobData, AppStep, Coordinates, AppView, User as UserType, Task, UserRole } from './types';
 import * as Storage from './services/storageService';
@@ -927,6 +929,16 @@ const App: React.FC = () => {
               {currentUser?.role === 'ADMIN' && (
                   <>
                     <button 
+                        onClick={() => setView(AppView.ADMIN_HISTORY)}
+                        className="bg-white border-2 border-slate-100 text-slate-700 p-6 rounded-2xl shadow-sm hover:border-blue-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-3"
+                    >
+                        <div className="bg-slate-800 text-white p-3 rounded-full">
+                            <FolderClock size={32} />
+                        </div>
+                        <span className="font-bold text-lg">Historial Completo</span>
+                    </button>
+
+                    <button 
                         onClick={() => setView(AppView.ADMIN_TASKS)}
                         className="bg-white border-2 border-slate-100 text-slate-700 p-6 rounded-2xl shadow-sm hover:border-blue-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-3"
                     >
@@ -1335,9 +1347,9 @@ const App: React.FC = () => {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                               <Camera className="w-8 h-8 text-slate-400 mb-2" />
-                              <p className="text-sm text-slate-500">Toque para tomar foto</p>
+                              <p className="text-sm text-slate-500">Tomar o subir foto</p>
                           </div>
-                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoBefore)} />
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoBefore)} />
                       </label>
                   )}
               </div>
@@ -1358,9 +1370,9 @@ const App: React.FC = () => {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                               <Camera className="w-8 h-8 text-slate-400 mb-2" />
-                              <p className="text-sm text-slate-500">Toque para tomar foto</p>
+                              <p className="text-sm text-slate-500">Tomar o subir foto</p>
                           </div>
-                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoAfter)} />
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handlePhotoUpload(e, setPhotoAfter)} />
                       </label>
                   )}
               </div>
@@ -1408,11 +1420,27 @@ const App: React.FC = () => {
                 <ChevronLeft size={20} /> Volver
              </button>
              <button 
-                onClick={() => setStep(AppStep.REVIEW)}
+                onClick={async () => {
+                    setStep(AppStep.REVIEW);
+                    try {
+                        const doc = await createPDFDocument();
+                        const blob = doc.output('blob');
+                        await Storage.saveReport({
+                            type: 'JOB',
+                            clientName: clientName || "Consumidor Final",
+                            workerName: workerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
+                            createdAt: Date.now(),
+                            description: description.substring(0, 100),
+                            refCode: "JOB-" + Date.now().toString().slice(-6)
+                        }, blob);
+                    } catch (e) {
+                        console.error("Error saving job report to history", e);
+                    }
+                }}
                 disabled={!signature || !workerSignature}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200"
              >
-                Finalizar <CheckCircle2 size={20} />
+                Finalizar y Guardar <CheckCircle2 size={20} />
              </button>
         </div>
     </div>
@@ -1619,6 +1647,10 @@ const App: React.FC = () => {
                 companyLogoUrl={COMPANY_LOGO_URL}
                 logoError={logoError}
             />
+        )}
+        
+        {view === AppView.ADMIN_HISTORY && (
+            <AdminHistory onBack={() => setView(AppView.DASHBOARD)} />
         )}
       </main>
 
