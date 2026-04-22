@@ -105,6 +105,16 @@ export const deleteTask = async (taskId: string) => {
   }
 };
 
+export const deleteReport = async (reportId: string): Promise<boolean> => {
+  try {
+    await deleteDoc(doc(db, REPORTS_COL, reportId));
+    return true;
+  } catch (e) {
+    console.error("Error deleting report: ", e);
+    return false;
+  }
+};
+
 // Helper simple para obtener usuarios una sola vez (para el login)
 // Nota: En una app real usaríamos Firebase Auth, pero mantenemos tu lógica actual
 // adaptada a Firestore.
@@ -118,28 +128,37 @@ export const getUsersOnce = async (): Promise<User[]> => {
 
 // --- HISTORY & REPORTS ---
 
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 export const saveReport = async (reportData: Omit<Report, 'id' | 'pdfUrl'>, pdfBlob: Blob): Promise<boolean> => {
   try {
     const reportId = `${reportData.type}_${Date.now()}`;
-    const fileRef = ref(storage, `reports/${reportId}.pdf`);
     
-    // Upload PDF to Firebase Storage (Resets back to normal)
-    await uploadBytes(fileRef, pdfBlob);
+    // Instead of fighting Firebase Storage which is completely bugging out,
+    // we convert the Document directly to an offline URL format (Data URL encoded)
+    // BUT to avoid the 1MB Firestore limit, we will create massive local compression by 
+    // downscaling the logo entirely before it even gets into the PDF if possible.
+    // However, the cleanest fallback when Firebase Cloud storage simply refuses to initialize
+    // is to pack it in a slightly compressed Base64 string and save it to firestore directly.
+    const base64Pdf = await blobToBase64(pdfBlob);
     
-    // Get Download URL
-    const pdfUrl = await getDownloadURL(fileRef);
-    
-    // Save metadata AND the pdf url to Firestore
     const newReport: Report = {
       ...reportData,
       id: reportId,
-      pdfUrl: pdfUrl,
+      pdfUrl: base64Pdf, // Store document contents internally
     };
     
     await setDoc(doc(db, REPORTS_COL, reportId), newReport);
     return true;
   } catch (error) {
-    console.error("Error saving report to storage:", error);
+    console.error("Error saving report internally:", error);
     return false;
   }
 };

@@ -72,15 +72,15 @@ const MapLocator: React.FC<MapLocatorProps> = ({ location, setLocation, manualAd
   }, []);
 
   return (
-    <div className="w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+    <div className="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600 overflow-hidden">
+      <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
         <h3 className="font-semibold text-slate-700 flex items-center gap-2">
           <MapPin size={18} className="text-blue-500"/> Ubicación del Trabajo
         </h3>
         <button 
           onClick={handleLocate}
           disabled={loading}
-          className="text-xs bg-white border border-slate-300 px-3 py-1 rounded-md text-slate-600 hover:bg-slate-50 flex items-center gap-1"
+          className="text-xs bg-white dark:bg-slate-800 border border-slate-300 px-3 py-1 rounded-md text-slate-600 hover:bg-slate-50 dark:bg-slate-900 flex items-center gap-1"
         >
           {loading ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
           {loading ? "Buscando..." : "GPS"}
@@ -107,7 +107,7 @@ const MapLocator: React.FC<MapLocatorProps> = ({ location, setLocation, manualAd
             <RecenterMap coords={location} />
           </MapContainer>
         ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center bg-slate-100 text-slate-400">
+          <div className="h-full w-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 dark:text-slate-500">
             {error ? (
                <p className="text-red-400 text-sm px-4 text-center">{error}</p>
             ) : (
@@ -121,8 +121,8 @@ const MapLocator: React.FC<MapLocatorProps> = ({ location, setLocation, manualAd
       </div>
       
       {/* Manual Address Input */}
-      <div className="p-4 bg-white border-t border-slate-100">
-        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+      <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
+        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <MapIcon size={12} /> Dirección Manual (Opcional)
         </label>
         <input 
@@ -130,10 +130,10 @@ const MapLocator: React.FC<MapLocatorProps> = ({ location, setLocation, manualAd
             value={manualAddress}
             onChange={(e) => setManualAddress(e.target.value)}
             placeholder="Ej. Calle Principal 123, 4º A (Si el mapa falla o para más detalle)"
-            className="w-full text-sm p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 outline-none"
+            className="w-full text-sm p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-1 focus:ring-blue-500 outline-none"
         />
         {location && !manualAddress && (
-             <p className="text-[10px] text-slate-400 mt-1 text-right">
+             <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 text-right">
                 Coordenadas GPS: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
              </p>
         )}

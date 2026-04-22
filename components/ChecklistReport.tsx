@@ -95,7 +95,39 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
     };
 
     const createPDFDocument = async () => {
-        const doc = new jsPDF();
+        // Add compress flag
+        const doc = new jsPDF({ compress: true });
+        
+        // Internal helper to squash huge png strings (like signatures) to tiny JPEGs
+        const compressImage = (base64Str: string, quality = 0.5): Promise<string> => {
+            return new Promise((resolve) => {
+                if(!base64Str) return resolve("");
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    // Cap signature width to 300px for safety
+                    const scale = Math.min(1, 300 / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    if(ctx){
+                        // White background for JPEG
+                        ctx.fillStyle = "#ffffff";
+                        ctx.fillRect(0,0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    } else {
+                        resolve(base64Str);
+                    }
+                };
+                img.onerror = () => resolve(base64Str);
+                img.src = base64Str;
+            });
+        };
+
+        // Pre-compress signatures
+        const workerSignatureCompressed = workerSignature ? await compressImage(workerSignature, 0.4) : null;
+        const clientSignatureCompressed = clientSignature ? await compressImage(clientSignature, 0.4) : null;
         
         // Brand Colors matched to logo
         const colorPrimary = [0, 174, 239];    // Cyan from logo
@@ -110,11 +142,30 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
         let titleX = 15;
         if (!logoError && companyLogoUrl) {
             try {
-                // Determine format
-                const isPng = companyLogoUrl.includes('data:image/png') || companyLogoUrl.endsWith('.png');
-                const format = isPng ? 'PNG' : 'JPEG';
+                // Compress the image down using a standard canvas trick to ensure the 
+                // base64 doesn't break the 1MB Firestore limit when saving locally.
+                const compressedLogo = await new Promise<string>((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous";
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Downscale to exactly 120x120 for PDF insertion (very lightweight)
+                        canvas.width = 120;
+                        canvas.height = 120;
+                        const ctx = canvas.getContext('2d');
+                        if(ctx){
+                            ctx.drawImage(img, 0, 0, 120, 120);
+                            // Save as high-compression JPEG
+                            resolve(canvas.toDataURL('image/jpeg', 0.6));
+                        } else {
+                            resolve(companyLogoUrl);
+                        }
+                    };
+                    img.onerror = () => resolve(companyLogoUrl);
+                    img.src = companyLogoUrl;
+                });
                 
-                doc.addImage(companyLogoUrl, format, 15, 5, 35, 35); 
+                doc.addImage(compressedLogo, 'JPEG', 15, 5, 35, 35); 
                 titleX = 55;
             } catch (e) {
                 console.warn("Could not load logo for PDF. Skipping image.", e);
@@ -234,8 +285,8 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
         doc.setFont("helvetica", "normal");
         
         doc.text("Firma del Trabajador:", 30, 60);
-        if (workerSignature) {
-            doc.addImage(workerSignature, 'PNG', 20, 65, 70, 35);
+        if (workerSignatureCompressed) {
+            doc.addImage(workerSignatureCompressed, 'JPEG', 20, 65, 70, 35);
         } else {
             doc.text("(No firmada)", 30, 90);
         }
@@ -245,8 +296,8 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
         doc.text(clientName || 'Sin especificar', 120, 65);
         doc.setFont("helvetica", "normal");
 
-        if (clientSignature) {
-            doc.addImage(clientSignature, 'PNG', 110, 70, 70, 35);
+        if (clientSignatureCompressed) {
+            doc.addImage(clientSignatureCompressed, 'JPEG', 110, 70, 70, 35);
         } else {
             doc.text("(No firmada)", 120, 90);
         }
@@ -299,8 +350,8 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
         const val = data[field].value;
         const needsReason = val === 'No' || val === 'N/A';
         return (
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                <label className="block font-bold text-slate-700 mb-2">{label}</label>
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm mb-4">
+                <label className="block font-bold text-slate-700 dark:text-slate-200 mb-2">{label}</label>
                 <div className="flex gap-4 mb-2">
                     {['Sí', 'No', 'N/A'].map(opt => (
                         <label key={opt} className="flex items-center gap-2 cursor-pointer">
@@ -312,7 +363,7 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                                 onChange={(e) => updateField(field, e.target.value)}
                                 className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className="text-slate-600">{opt}</span>
+                            <span className="text-slate-600 dark:text-slate-300">{opt}</span>
                         </label>
                     ))}
                 </div>
@@ -323,7 +374,7 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                             placeholder="Motivo (opcional)"
                             value={data[field].reason}
                             onChange={(e) => updateField(field, e.target.value, true)}
-                            className="w-full text-sm p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full text-sm p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100"
                         />
                     </div>
                 )}
@@ -333,14 +384,14 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
     const renderTextGroup = (label: string, field: keyof ChecklistState, placeholder: string = "Escriba aquí...") => {
         return (
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                <label className="block font-bold text-slate-700 mb-2">{label}</label>
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm mb-4">
+                <label className="block font-bold text-slate-700 dark:text-slate-200 mb-2">{label}</label>
                 <input 
                     type="text" 
                     placeholder={placeholder}
                     value={data[field].value}
                     onChange={(e) => updateField(field, e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100"
                 />
             </div>
         );
@@ -349,16 +400,16 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
     return (
         <div className="space-y-6 animate-fadeIn pb-24">
             {/* Header / Nav */}
-            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                 <button 
                   onClick={handleBack}
-                  className="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors"
+                  className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:bg-slate-700 transition-colors"
                 >
                     <ChevronLeft size={24} />
                 </button>
                 <div className="flex-1">
-                    <h2 className="text-xl font-bold text-slate-800">Check List</h2>
-                    <p className="text-sm text-slate-500">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Check List</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
                         {step === ChecklistStep.INSTALLER && "Datos del Instalador"}
                         {step === ChecklistStep.FORM && "Verificación de Tareas"}
                         {step === ChecklistStep.SIGNATURE && "Firmas"}
@@ -369,16 +420,16 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
             {/* Steps Rendering */}
             {step === ChecklistStep.INSTALLER && (
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600 space-y-6">
                     <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase">Nombre del Instalador</label>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2 uppercase">Nombre del Instalador</label>
                         <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={20} />
                             <input 
                               type="text" 
                               value={installerName}
                               onChange={(e) => setInstallerName(e.target.value)}
-                              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                              className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100"
                               placeholder="Nombre y Apellidos"
                             />
                         </div>
@@ -398,7 +449,7 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                     {renderRadioGroup("* Instalación de desagües correcta:", "desagues_correcta")}
                     {renderRadioGroup("* Instalación hidráulica correcta:", "hidraulica_correcta")}
 
-                    <h3 className="text-lg font-bold text-slate-800 mt-6 mb-2">Mediciones y Datos</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-6 mb-2">Mediciones y Datos</h3>
                     {renderTextGroup("* Diámetro tuberías Gas/Líquido:", "diametro_tuberias")}
                     {renderTextGroup("* Temperatura entrada y salida de aire unidad interior:", "temperatura_aire")}
                     {renderTextGroup("* Presión de gas Alta/Baja:", "presion_gas")}
@@ -410,11 +461,11 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
             {step === ChecklistStep.SIGNATURE && (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <label className="block font-bold text-slate-700 mb-2">Firma del Trabajador/Instalador</label>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600">
+                        <label className="block font-bold text-slate-700 dark:text-slate-200 mb-2">Firma del Trabajador/Instalador</label>
                         {workerSignature ? (
                              <div className="space-y-3">
-                                 <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex justify-center">
+                                 <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 flex justify-center">
                                      <img src={workerSignature} alt="Firma Trabajador" className="h-32 object-contain" />
                                  </div>
                                  <button 
@@ -429,20 +480,20 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                         )}
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <label className="block font-bold text-slate-700 mb-4 text-center">Datos y Firma del Cliente</label>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600">
+                        <label className="block font-bold text-slate-700 dark:text-slate-200 mb-4 text-center">Datos y Firma del Cliente</label>
                         <div className="mb-4">
                             <input 
                               type="text" 
                               value={clientName}
                               onChange={(e) => setClientName(e.target.value)}
-                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center font-semibold"
+                              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center font-semibold text-slate-800 dark:text-slate-100"
                               placeholder="Nombre Apellidos / Empresa (Cliente)"
                             />
                         </div>
                         {clientSignature ? (
                              <div className="space-y-3">
-                                 <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex justify-center">
+                                 <div className="border border-slate-200 dark:border-slate-600 rounded-xl p-2 bg-slate-50 dark:bg-slate-900 flex justify-center">
                                      <img src={clientSignature} alt="Firma Cliente" className="h-32 object-contain" />
                                  </div>
                                  <button 
@@ -461,19 +512,19 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
             {step === ChecklistStep.REVIEW && (
                 <div className="space-y-4">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center py-10">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-600 flex flex-col items-center justify-center py-10">
                         <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-4">
                             <CheckSquare size={40} />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Check List Lista</h2>
-                        <p className="text-slate-500 text-center mb-8 max-w-sm">
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Check List Lista</h2>
+                        <p className="text-slate-500 dark:text-slate-400 dark:text-slate-500 text-center mb-8 max-w-sm">
                             La verificación ha sido completada y está lista para generarse como documento PDF.
                         </p>
                         
                         <div className="w-full flex flex-col gap-3">
                            <button 
                                onClick={handlePreviewPDF}
-                               className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold py-4 rounded-xl hover:bg-slate-200 transition-colors"
+                               className="w-full flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold py-4 rounded-xl hover:bg-slate-200 dark:bg-slate-700 transition-colors"
                            >
                                <Eye size={20} /> Previsualizar PDF
                            </button>
@@ -485,7 +536,7 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                                         const doc = await createPDFDocument();
                                         const blob = doc.output('blob');
                                         
-                                        await Storage.saveReport({
+                                        const success = await Storage.saveReport({
                                             type: 'CHECKLIST',
                                             clientName: clientName || "Consumidor Final",
                                             workerName: installerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
@@ -494,10 +545,14 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                                             refCode: "CL-" + Date.now().toString().slice(-6)
                                         }, blob);
                                         
-                                        onBack();
+                                        if (success) {
+                                            onBack();
+                                        } else {
+                                            alert("Se agotó el tiempo subiendo el PDF. Las reglas de Storage de Firebase te están bloqueando. Sigue las instrucciones del chat de la Opción B.");
+                                            setIsSaving(false);
+                                        }
                                     } catch (e) {
                                         console.error("Error saving checklist report", e);
-                                    } finally {
                                         setIsSaving(false);
                                     }
                                }}
@@ -513,11 +568,11 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
             {/* Bottom Nav */}
             {step !== ChecklistStep.REVIEW && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 pb-safe flex justify-between z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
+                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-600 p-4 pb-safe flex justify-between z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.05)]">
                     <div className="max-w-3xl justify-between mx-auto w-full flex">
                         <button 
                             onClick={handleBack}
-                            className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                            className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 dark:bg-slate-700 transition-colors"
                         >
                             Volver
                         </button>
@@ -543,9 +598,9 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
 
             {previewPdfUrl && (
                 <div className="fixed inset-0 z-[100] bg-slate-900 bg-opacity-90 flex flex-col p-2 md:p-6 backdrop-blur-sm">
-                    <div className="w-full max-w-5xl mx-auto h-full bg-white rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-                        <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200">
-                            <h3 className="font-bold text-slate-700">Vista Previa del Check List</h3>
+                    <div className="w-full max-w-5xl mx-auto h-full bg-white dark:bg-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+                        <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-600">
+                            <h3 className="font-bold text-slate-700 dark:text-slate-200">Vista Previa del Check List</h3>
                             <button onClick={() => setPreviewPdfUrl(null)}>Cerrar</button>
                         </div>
                         <iframe src={previewPdfUrl} className="w-full h-full border-0" title="Check List PDF" />

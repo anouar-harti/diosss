@@ -1,81 +1,24 @@
-export interface Coordinates {
-  lat: number;
-  lng: number;
+const fs = require('fs');
+
+function fixFile(filePath) {
+    let content = fs.readFileSync(filePath, 'utf8');
+
+    // Safe string replace looking closely at known un-handled classes
+    content = content.replace(/className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"/g, 
+                             'className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100 dark:bg-slate-900"');
+                             
+    content = content.replace(/className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/g, 
+                             'className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100 dark:bg-slate-900"');
+                             
+    // Add text-slate-100 specifically anywhere we put dark:bg-slate-900 or 800 just in case
+    // Already did most in first script, but let's check Checklist inputs too.
+
+    fs.writeFileSync(filePath, content);
 }
 
-export interface JobData {
-  id: string;
-  startTime: Date | null;
-  endTime: Date | null;
-  description: string;
-  materials: string;
-  price: string;
-  location: Coordinates | null;
-  manualAddress: string;
-  locationAddress?: string;
-  clientSignature: string | null;
-  clientName: string;
-  workerName: string;
-  workerSignature: string | null;
-}
-
-export enum AppStep {
-  IDLE = 'IDLE',
-  WORKING = 'WORKING',
-  DETAILS = 'DETAILS',
-  PHOTOS = 'PHOTOS',
-  SIGNATURE = 'SIGNATURE',
-  REVIEW = 'REVIEW',
-}
-
-export enum ChecklistStep {
-  INSTALLER = 'INSTALLER',
-  FORM = 'FORM',
-  SIGNATURE = 'SIGNATURE',
-  REVIEW = 'REVIEW',
-}
-
-// New Types for Auth and Tasks
-export type UserRole = 'ADMIN' | 'WORKER';
-
-export interface User {
-  username: string;
-  password?: string; // Only used for auth check, not stored in clear text in real apps (simulated here)
-  role: UserRole;
-  fullName: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  location: string;
-  description: string;
-  assignedTo: string; // username
-  createdBy: string;
-  isCompleted: boolean;
-  createdAt: number;
-}
-
-export type ReportType = 'JOB' | 'CHECKLIST';
-
-export interface Report {
-  id: string;
-  type: ReportType;
-  pdfUrl: string;
-  clientName: string;
-  workerName: string;
-  createdAt: number;
-  description?: string;
-  refCode?: string;
-}
-
-export enum AppView {
-  LOGIN = 'LOGIN',
-  DASHBOARD = 'DASHBOARD',
-  JOB_REPORT = 'JOB_REPORT', // The original app flow
-  CHECKLIST_REPORT = 'CHECKLIST_REPORT', // New checklist flow
-  TASK_LIST = 'TASK_LIST',   // For workers to see tasks
-  ADMIN_USERS = 'ADMIN_USERS', // For admin to create users
-  ADMIN_TASKS = 'ADMIN_TASKS', // For admin to assign tasks
-  ADMIN_HISTORY = 'ADMIN_HISTORY', // For admin to see history
-}
+['App.tsx', 'components/AdminHistory.tsx', 'components/ChecklistReport.tsx', 'components/CheckListPreview.tsx'].forEach(file => {
+    if (fs.existsSync(file)) {
+        fixFile(file);
+    }
+});
+console.log('Fixed inputs precisely');
