@@ -1416,29 +1416,11 @@ const App: React.FC = () => {
                 <ChevronLeft size={20} /> Volver
              </button>
              <button 
-                onClick={() => {
-                    // 1. Saltar de inmediato a la última pantalla
-                    setStep(AppStep.REVIEW);
-                    
-                    // 2. Ejecutar la generación del PDF y subida en segundo plano
-                    createPDFDocument().then(doc => {
-                        const blob = doc.output('blob');
-                        
-                        Storage.saveReport({
-                            type: 'JOB',
-                            clientName: clientName || "Consumidor Final",
-                            workerName: workerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
-                            createdAt: Date.now(),
-                            description: description.substring(0, 100),
-                            refCode: "JOB-" + Date.now().toString().slice(-6)
-                        }, blob).catch(e => console.error("Error en Firebase Storage:", e));
-                        
-                    }).catch(e => console.error("Error generando PDF local:", e));
-                }}
+                onClick={() => setStep(AppStep.REVIEW)}
                 disabled={!signature || !workerSignature}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200"
              >
-                Finalizar y Guardar <CheckCircle2 size={20} />
+                Continuar <CheckCircle2 size={20} />
              </button>
         </div>
     </div>
@@ -1457,68 +1439,64 @@ const App: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={handlePreviewPDF}
-                    className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 p-4 rounded-xl font-bold hover:bg-slate-200 transition-all shadow-sm active:scale-95 border border-slate-200"
-                  >
-                      <Eye size={20} />
-                      <span className="text-sm md:text-base">Previsualizar</span>
-                  </button>
-                  <button 
-                    onClick={() => setStep(AppStep.DETAILS)}
-                    className="w-full flex items-center justify-center gap-2 bg-white text-orange-600 p-4 rounded-xl font-bold hover:bg-orange-50 transition-all shadow-sm active:scale-95 border border-orange-200"
-                  >
-                      <PenTool size={20} />
-                      <span className="text-sm md:text-base">Editar Datos</span>
-                  </button>
-              </div>
-              
               <button 
-                onClick={generatePDF}
-                className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white p-4 rounded-xl font-bold hover:bg-black transition-all shadow-xl shadow-slate-200 active:scale-95"
+                onClick={handlePreviewPDF}
+                className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all shadow-sm active:scale-95 border border-slate-200"
               >
-                  <Download size={20} />
-                  Descargar Parte (PDF)
+                  <Eye size={20} /> Previsualizar PDF
               </button>
               
               <button 
-                onClick={handleShareEmail}
-                className="w-full flex items-center justify-center gap-3 bg-white text-blue-600 border-2 border-blue-100 p-4 rounded-xl font-bold hover:bg-blue-50 transition-all active:scale-95"
+                onClick={async () => {
+                    setIsEnhancing(true); // Reusing this as loading state for the save process
+                    try {
+                        const doc = await createPDFDocument();
+                        const blob = doc.output('blob');
+                        
+                        // Save to Firebase
+                        await Storage.saveReport({
+                            type: 'JOB',
+                            clientName: clientName || "Consumidor Final",
+                            workerName: workerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
+                            createdAt: Date.now(),
+                            description: description.substring(0, 100),
+                            refCode: "JOB-" + Date.now().toString().slice(-6)
+                        }, blob);
+                        
+                        // Reset Flow
+                        setView(AppView.DASHBOARD);
+                        setStep(AppStep.IDLE);
+                        setStartTime(null);
+                        setEndTime(null);
+                        setDescription("");
+                        setMaterials("");
+                        setPrice("");
+                        setClientName("");
+                        setClientEmail("");
+                        setWorkerName(""); // Clear worker name
+                        setManualAddress("");
+                        setLocation(null);
+                        setSignature(null);
+                        setWorkerSignature(null);
+                        setPhotoBefore(null);
+                        setPhotoAfter(null);
+                        setPreviewPdfUrl(null);
+                        setTotalPausedMs(0);
+                        setIsPaused(false);
+                        setPauseStartTime(null);
+                        
+                    } catch (e) {
+                         console.error("Error guardando el PDF", e);
+                    } finally {
+                         setIsEnhancing(false);
+                    }
+                }}
+                disabled={isEnhancing}
+                className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 active:scale-95 disabled:bg-slate-300"
               >
-                  <Mail size={20} />
-                  Preparar Email
+                  {isEnhancing ? "Guardando..." : "Guardar en tu Historial y Volver al Inicio"}
               </button>
           </div>
-
-          <button 
-            onClick={() => {
-                // Return to dashboard instead of idle step loop
-                setView(AppView.DASHBOARD);
-                setStep(AppStep.IDLE);
-                setStartTime(null);
-                setEndTime(null);
-                setDescription("");
-                setMaterials("");
-                setPrice("");
-                setClientName("");
-                setClientEmail("");
-                setWorkerName(""); // Clear worker name
-                setManualAddress("");
-                setLocation(null);
-                setSignature(null);
-                setWorkerSignature(null);
-                setPhotoBefore(null);
-                setPhotoAfter(null);
-                setPreviewPdfUrl(null);
-                setTotalPausedMs(0);
-                setIsPaused(false);
-                setPauseStartTime(null);
-            }}
-            className="w-full text-center text-slate-400 text-sm mt-8 hover:text-slate-600 py-4"
-          >
-              Volver al Inicio
-          </button>
       </div>
   );
 

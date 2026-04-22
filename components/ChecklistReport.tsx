@@ -479,17 +479,32 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                            </button>
 
                            <button 
-                               onClick={generatePDF}
-                               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                               onClick={async () => {
+                                    setIsSaving(true);
+                                    try {
+                                        const doc = await createPDFDocument();
+                                        const blob = doc.output('blob');
+                                        
+                                        await Storage.saveReport({
+                                            type: 'CHECKLIST',
+                                            clientName: clientName || "Consumidor Final",
+                                            workerName: installerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
+                                            createdAt: Date.now(),
+                                            description: `Checklist Técnico - ${clientName || 'General'}`,
+                                            refCode: "CL-" + Date.now().toString().slice(-6)
+                                        }, blob);
+                                        
+                                        onBack();
+                                    } catch (e) {
+                                        console.error("Error saving checklist report", e);
+                                    } finally {
+                                        setIsSaving(false);
+                                    }
+                               }}
+                               disabled={isSaving}
+                               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:bg-slate-300"
                            >
-                               <Download size={20} /> Guardar Presupuesto/Checklist
-                           </button>
-
-                           <button 
-                               onClick={handleShareEmail}
-                               className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white font-bold py-4 rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200"
-                           >
-                               <Mail size={20} /> Enviar / Compartir
+                               {isSaving ? "Guardando..." : "Guardar en tu Historial y Volver al Inicio"}
                            </button>
                         </div>
                     </div>
@@ -508,29 +523,11 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                         </button>
                         {step === ChecklistStep.SIGNATURE ? (
                             <button 
-                                onClick={() => {
-                                    // 1. Saltar de inmediato a la siguiente pantalla
-                                    setStep(ChecklistStep.REVIEW);
-                                    
-                                    // 2. Ejecutar la subida a Firebase en segundo plano
-                                    createPDFDocument().then(doc => {
-                                        const blob = doc.output('blob');
-                                        
-                                        Storage.saveReport({
-                                            type: 'CHECKLIST',
-                                            clientName: clientName || "Consumidor Final",
-                                            workerName: installerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
-                                            createdAt: Date.now(),
-                                            description: `Checklist Técnico - ${clientName || 'General'}`,
-                                            refCode: "CL-" + Date.now().toString().slice(-6)
-                                        }, blob).catch(e => console.error("Error al subir Checklist a Firebase:", e));
-                                        
-                                    }).catch(e => console.error("Error al generar PDF de Checklist:", e));
-                                }}
+                                onClick={() => setStep(ChecklistStep.REVIEW)}
                                 disabled={!workerSignature || !clientSignature}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
                             >
-                                Finalizar y Guardar <CheckCircle2 size={20} />
+                                Continuar <CheckCircle2 size={20} />
                             </button>
                         ) : (
                             <button 
