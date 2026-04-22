@@ -150,8 +150,8 @@ const App: React.FC = () => {
   // --- Theme State ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
      if (typeof window !== 'undefined') {
-         return localStorage.getItem('theme') === 'dark' ||
-                (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+         // Por defecto en modo claro, a menos que el usuario lo haya cambiado a oscuro previamente
+         return localStorage.getItem('theme') === 'dark';
      }
      return false;
   });
