@@ -454,17 +454,13 @@ const App: React.FC = () => {
     doc.line(15, 45, 195, 45); 
 
     let titleX = 15;
-    if (!logoError) {
+    if (!logoError && COMPANY_LOGO_URL) {
         try {
-            const img = new Image();
-            img.src = COMPANY_LOGO_URL;
-            img.crossOrigin = "Anonymous";
-            await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-            });
-            // Try adding the HTMLImageElement to PDF
-            doc.addImage(img, 'PNG', 15, 5, 35, 35); // slightly bigger to look nice
+            // Determine format
+            const isPng = COMPANY_LOGO_URL.includes('data:image/png') || COMPANY_LOGO_URL.endsWith('.png');
+            const format = isPng ? 'PNG' : 'JPEG';
+            
+            doc.addImage(COMPANY_LOGO_URL, format, 15, 5, 35, 35); // slightly bigger to look nice
             titleX = 55;
         } catch (e) {
             console.warn("Could not load logo for PDF. Skipping image.", e);
@@ -1420,39 +1416,29 @@ const App: React.FC = () => {
                 <ChevronLeft size={20} /> Volver
              </button>
              <button 
-                onClick={async () => {
-                    setIsEnhancing(true); // Reusing this loading state, or could create `isSavingReport`
-                    try {
-                        const doc = await createPDFDocument();
+                onClick={() => {
+                    // 1. Saltar de inmediato a la última pantalla
+                    setStep(AppStep.REVIEW);
+                    
+                    // 2. Ejecutar la generación del PDF y subida en segundo plano
+                    createPDFDocument().then(doc => {
                         const blob = doc.output('blob');
                         
-                        // Save to history in background (Directo a la nube)
-                        await Storage.saveReport({
+                        Storage.saveReport({
                             type: 'JOB',
                             clientName: clientName || "Consumidor Final",
                             workerName: workerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
                             createdAt: Date.now(),
                             description: description.substring(0, 100),
                             refCode: "JOB-" + Date.now().toString().slice(-6)
-                        }, blob);
+                        }, blob).catch(e => console.error("Error en Firebase Storage:", e));
                         
-                        setStep(AppStep.REVIEW);
-                    } catch (e) {
-                        console.error("Error saving job report to history", e);
-                        // If it fails, still go to Review so they don't get stuck
-                        setStep(AppStep.REVIEW);
-                    } finally {
-                        setIsEnhancing(false);
-                    }
+                    }).catch(e => console.error("Error generando PDF local:", e));
                 }}
-                disabled={!signature || !workerSignature || isEnhancing}
+                disabled={!signature || !workerSignature}
                 className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-colors shadow-lg shadow-blue-200"
              >
-                {isEnhancing ? (
-                    'Guardando...'
-                ) : (
-                    <>Finalizar y Guardar <CheckCircle2 size={20} /></>
-                )}
+                Finalizar y Guardar <CheckCircle2 size={20} />
              </button>
         </div>
     </div>

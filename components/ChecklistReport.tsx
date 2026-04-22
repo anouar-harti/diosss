@@ -108,16 +108,13 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
         doc.line(15, 45, 195, 45); 
     
         let titleX = 15;
-        if (!logoError) {
+        if (!logoError && companyLogoUrl) {
             try {
-                const img = new Image();
-                img.src = companyLogoUrl;
-                img.crossOrigin = "Anonymous";
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = reject;
-                });
-                doc.addImage(img, 'PNG', 15, 5, 35, 35); 
+                // Determine format
+                const isPng = companyLogoUrl.includes('data:image/png') || companyLogoUrl.endsWith('.png');
+                const format = isPng ? 'PNG' : 'JPEG';
+                
+                doc.addImage(companyLogoUrl, format, 15, 5, 35, 35); 
                 titleX = 55;
             } catch (e) {
                 console.warn("Could not load logo for PDF. Skipping image.", e);
@@ -511,34 +508,29 @@ const ChecklistReport: React.FC<ChecklistReportProps> = ({ currentUser, onBack, 
                         </button>
                         {step === ChecklistStep.SIGNATURE ? (
                             <button 
-                                onClick={async () => {
-                                    setIsSaving(true);
-                                    try {
-                                        const doc = await createPDFDocument();
+                                onClick={() => {
+                                    // 1. Saltar de inmediato a la siguiente pantalla
+                                    setStep(ChecklistStep.REVIEW);
+                                    
+                                    // 2. Ejecutar la subida a Firebase en segundo plano
+                                    createPDFDocument().then(doc => {
                                         const blob = doc.output('blob');
                                         
-                                        // Save to Firebase (Directo al Historial Completo)
-                                        await Storage.saveReport({
+                                        Storage.saveReport({
                                             type: 'CHECKLIST',
                                             clientName: clientName || "Consumidor Final",
                                             workerName: installerName || currentUser?.fullName || currentUser?.username || 'Desconocido',
                                             createdAt: Date.now(),
                                             description: `Checklist Técnico - ${clientName || 'General'}`,
                                             refCode: "CL-" + Date.now().toString().slice(-6)
-                                        }, blob);
+                                        }, blob).catch(e => console.error("Error al subir Checklist a Firebase:", e));
                                         
-                                        setStep(ChecklistStep.REVIEW);
-                                    } catch (e) {
-                                        console.error("Error saving checklist report to history", e);
-                                        setStep(ChecklistStep.REVIEW); // Advance anyway on failure
-                                    } finally {
-                                        setIsSaving(false);
-                                    }
+                                    }).catch(e => console.error("Error al generar PDF de Checklist:", e));
                                 }}
-                                disabled={!workerSignature || !clientSignature || isSaving}
+                                disabled={!workerSignature || !clientSignature}
                                 className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 flex items-center gap-2 hover:bg-blue-700 disabled:bg-slate-300 transition-colors"
                             >
-                                {isSaving ? 'Guardando...' : <>Finalizar y Guardar <CheckCircle2 size={20} /></>}
+                                Finalizar y Guardar <CheckCircle2 size={20} />
                             </button>
                         ) : (
                             <button 

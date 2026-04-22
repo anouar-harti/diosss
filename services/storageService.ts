@@ -123,23 +123,23 @@ export const saveReport = async (reportData: Omit<Report, 'id' | 'pdfUrl'>, pdfB
     const reportId = `${reportData.type}_${Date.now()}`;
     const fileRef = ref(storage, `reports/${reportId}.pdf`);
     
-    // Upload PDF to Firebase Storage
+    // Upload PDF to Firebase Storage (Resets back to normal)
     await uploadBytes(fileRef, pdfBlob);
     
     // Get Download URL
     const pdfUrl = await getDownloadURL(fileRef);
     
-    // Save metadata to Firestore
+    // Save metadata AND the pdf url to Firestore
     const newReport: Report = {
       ...reportData,
       id: reportId,
-      pdfUrl,
+      pdfUrl: pdfUrl,
     };
     
     await setDoc(doc(db, REPORTS_COL, reportId), newReport);
     return true;
   } catch (error) {
-    console.error("Error saving report:", error);
+    console.error("Error saving report to storage:", error);
     return false;
   }
 };

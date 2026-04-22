@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 // --- IMPORTANTE: PEGA AQUÍ TUS DATOS DE FIREBASE CONSOLE ---
 const firebaseConfig = {
@@ -16,3 +17,10 @@ apiKey: "AIzaSyDu2bL9mxXWf3rKHse-gLG508cO5mRlkX8",
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const auth = getAuth(app);
+
+// Attempt anonymous auth, but do not throw or crash if not enabled.
+// If this fails, the user needs to set Storage rules to `allow read, write: if true;`
+signInAnonymously(auth).catch((error) => {
+  console.warn("No se pudo iniciar sesión anónima (probablemente esté desactivado en Firebase Console). Asegúrate de que las reglas de Firebase Storage estén en 'allow read, write: if true;'. Detalle:", error.message);
+});

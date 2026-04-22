@@ -179,11 +179,10 @@ const AdminHistory: React.FC<AdminHistoryProps> = ({ onBack }) => {
                             
                             <a 
                                 href={report.pdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                download={`${report.clientName}_${report.refCode}.pdf`}
                                 className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 text-blue-600 border border-slate-200 rounded-xl font-bold hover:bg-blue-50 hover:border-blue-200 transition-colors shrink-0"
                             >
-                                Ver PDF <ExternalLink size={18} />
+                                Descargar PDF <ExternalLink size={18} />
                             </a>
                         </div>
                     ))
