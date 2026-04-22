@@ -1,14 +1,34 @@
-// Service Worker básico para permitir la instalación PWA
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-  // Estrategia simple: Network Only (para evitar problemas de caché en desarrollo)
-  // Esto es suficiente para que Chrome detecte la app como instalable.
-  event.respondWith(fetch(event.request));
-});
+{
+  "name": "climatrack-pro",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npx vite build",
+    "preview": "vite preview"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "@types/leaflet": "^1.9.12",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.18",
+    "firebase": "^10.8.1",
+    "jspdf": "^2.5.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.344.0",
+    "motion": "^12.38.0",
+    "postcss": "^8.4.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.1"
+  }
+}

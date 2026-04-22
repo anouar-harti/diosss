@@ -1,81 +1,20 @@
-export interface Coordinates {
-  lat: number;
-  lng: number;
-}
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-export interface JobData {
-  id: string;
-  startTime: Date | null;
-  endTime: Date | null;
-  description: string;
-  materials: string;
-  price: string;
-  location: Coordinates | null;
-  manualAddress: string;
-  locationAddress?: string;
-  clientSignature: string | null;
-  clientName: string;
-  workerName: string;
-  workerSignature: string | null;
-}
+# Run and deploy your AI Studio app
 
-export enum AppStep {
-  IDLE = 'IDLE',
-  WORKING = 'WORKING',
-  DETAILS = 'DETAILS',
-  PHOTOS = 'PHOTOS',
-  SIGNATURE = 'SIGNATURE',
-  REVIEW = 'REVIEW',
-}
+This contains everything you need to run your app locally.
 
-export enum ChecklistStep {
-  INSTALLER = 'INSTALLER',
-  FORM = 'FORM',
-  SIGNATURE = 'SIGNATURE',
-  REVIEW = 'REVIEW',
-}
+View your app in AI Studio: https://ai.studio/apps/126881c8-7eac-4563-a01c-2ac56140d640
 
-// New Types for Auth and Tasks
-export type UserRole = 'ADMIN' | 'WORKER';
+## Run Locally
 
-export interface User {
-  username: string;
-  password?: string; // Only used for auth check, not stored in clear text in real apps (simulated here)
-  role: UserRole;
-  fullName: string;
-}
+**Prerequisites:**  Node.js
 
-export interface Task {
-  id: string;
-  title: string;
-  location: string;
-  description: string;
-  assignedTo: string; // username
-  createdBy: string;
-  isCompleted: boolean;
-  createdAt: number;
-}
 
-export type ReportType = 'JOB' | 'CHECKLIST';
-
-export interface Report {
-  id: string;
-  type: ReportType;
-  pdfUrl: string;
-  clientName: string;
-  workerName: string;
-  createdAt: number;
-  description?: string;
-  refCode?: string;
-}
-
-export enum AppView {
-  LOGIN = 'LOGIN',
-  DASHBOARD = 'DASHBOARD',
-  JOB_REPORT = 'JOB_REPORT', // The original app flow
-  CHECKLIST_REPORT = 'CHECKLIST_REPORT', // New checklist flow
-  TASK_LIST = 'TASK_LIST',   // For workers to see tasks
-  ADMIN_USERS = 'ADMIN_USERS', // For admin to create users
-  ADMIN_TASKS = 'ADMIN_TASKS', // For admin to assign tasks
-  ADMIN_HISTORY = 'ADMIN_HISTORY', // For admin to see history
-}
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
